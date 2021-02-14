@@ -17,14 +17,21 @@ jobs:
     steps:
     - uses: actions/checkout@v2
             
+    - name: Install latest stable
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: stable
+          override: true
+            
     - name: Print version
-      run: cargo version -v
+      uses: actions-rs/cargo@v1
+      with:
+        command: version -v
       
-    - name: Build
-      run: cargo build
-      
-    - name: Run tests
-      run: cargo test
+    - name: Run cargo build
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
 
     - uses: actions/upload-artifact@v2
       with:

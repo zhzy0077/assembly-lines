@@ -26,7 +26,8 @@ jobs:
     - name: Print version
       uses: actions-rs/cargo@v1
       with:
-        command: version -v
+        command: version
+        args: -v
       
     - name: Run cargo build
       uses: actions-rs/cargo@v1

@@ -23,17 +23,6 @@ jobs:
           toolchain: stable
           override: true
             
-    - name: Print version
-      uses: actions-rs/cargo@v1
-      with:
-        command: version
-        args: -v
-
-    - name: Print tree
-      uses: actions-rs/cargo@v1
-      with:
-        command: tree
-      
     - name: Run cargo build
       uses: actions-rs/cargo@v1
       with:
@@ -42,4 +31,4 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: linux-x64
-        path: target/release/assembly-lines
+        path: target/debug/assembly-lines

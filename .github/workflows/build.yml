@@ -28,6 +28,11 @@ jobs:
       with:
         command: version
         args: -v
+
+    - name: Print tree
+      uses: actions-rs/cargo@v1
+      with:
+        command: tree
       
     - name: Run cargo build
       uses: actions-rs/cargo@v1

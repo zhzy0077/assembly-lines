@@ -1,3 +1,6 @@
+mod command;
+mod decompress;
+mod download;
 mod echo;
 mod gist;
 mod http;
@@ -5,14 +8,16 @@ mod parser;
 mod util;
 mod wechat;
 
+use crate::command::Command;
+use crate::decompress::Decompress;
+use crate::download::Download;
 use crate::echo::Echo;
 use crate::gist::Gist;
 use crate::http::Http;
 use crate::wechat::WeChat;
-
 use anyhow::{anyhow, Context as _, Result};
 use enum_dispatch::enum_dispatch;
-
+use lazy_static::lazy_static;
 use parser::fulfill;
 use serde::Deserialize;
 use std::{collections::HashMap, env, fs};
@@ -21,7 +26,7 @@ const USER_AGENT: &'static str = "assemblies/1.0";
 
 #[enum_dispatch(SupportedAssemblies)]
 trait Assembly {
-    fn assemble(self, input: Payload) -> Result<Payload>;
+    fn assemble(&self, input: Payload) -> Result<Payload>;
     fn parameters(&self) -> &'static [&'static str];
     fn outputs(&self) -> &'static [&'static str];
 }
@@ -65,7 +70,25 @@ enum SupportedAssemblies {
     Gist,
     Echo,
     WeChat,
+    Command,
+    Download,
+    Decompress,
 }
+
+lazy_static! {
+    static ref ASSMBLIES: HashMap<&'static str, SupportedAssemblies> = {
+        let mut m = HashMap::new();
+        m.insert("http", Http {}.into());
+        m.insert("echo", Echo {}.into());
+        m.insert("wechat", WeChat {}.into());
+        m.insert("gist", Gist {}.into());
+        m.insert("command", Command {}.into());
+        m.insert("download", Download {}.into());
+        m.insert("decompress", Decompress {}.into());
+        m
+    };
+}
+
 #[derive(Debug, Deserialize)]
 struct Config {
     assembly_line: Vec<AssemblyConfig>,
@@ -77,24 +100,16 @@ struct AssemblyConfig {
     parameters: HashMap<String, String>,
 }
 
-fn find_assembly(assembly_type: &str) -> Result<SupportedAssemblies> {
-    match assembly_type {
-        "http" => Ok(Http {}.into()),
-        "echo" => Ok(Echo {}.into()),
-        "wechat" => Ok(WeChat {}.into()),
-        "gist" => Ok(Gist {}.into()),
-        _ => Err(anyhow!("Assembly {} is not found.", assembly_type)),
-    }
-}
-
 fn make_assembly(
-    assembly_config: &AssemblyConfig,
+    config: &AssemblyConfig,
     context: &Context,
-) -> Result<(SupportedAssemblies, Payload)> {
-    let assembly = find_assembly(&assembly_config.assembly_type)?;
+) -> Result<(&'static SupportedAssemblies, Payload)> {
+    let assembly = ASSMBLIES
+        .get(&config.assembly_type.to_lowercase()[..])
+        .context(anyhow!("Assembly {} is not found.", config.assembly_type))?;
     let mut payload: HashMap<&'static str, String> = HashMap::new();
     for key in assembly.parameters() {
-        if let Some(value) = assembly_config.parameters.get(*key) {
+        if let Some(value) = config.parameters.get(*key) {
             payload.insert(key, fulfill(value, &context)?);
         }
     }

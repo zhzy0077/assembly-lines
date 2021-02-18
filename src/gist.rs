@@ -76,7 +76,7 @@ impl Gist {
 }
 
 impl Assembly for Gist {
-    fn assemble(self, payload: Payload) -> Result<Payload> {
+    fn assemble(&self, payload: Payload) -> Result<Payload> {
         let action: GistAction = payload.parameter(Gist::ACTION).to_uppercase().parse()?;
         let gist_id = payload.parameter(Gist::GIST_ID);
         let access_token = payload.parameter(Gist::ACCESS_TOKEN);

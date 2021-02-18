@@ -65,7 +65,7 @@ impl WeChat {
 }
 
 impl Assembly for WeChat {
-    fn assemble(self, payload: Payload) -> Result<Payload> {
+    fn assemble(&self, payload: Payload) -> Result<Payload> {
         let corp_id = payload.parameter(WeChat::CORP_ID);
         let secret = payload.parameter(WeChat::CORP_SECRET);
         let agent_id = payload.parameter(WeChat::AGENT_ID).parse()?;

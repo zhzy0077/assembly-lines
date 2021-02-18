@@ -1,0 +1,30 @@
+assembly_line:
+  - type: download
+    parameters:
+      url: https://github.com/tindy2013/subconverter/releases/download/v0.6.4/subconverter_aarch64.tar.gz
+      destination: subconverter_aarch64.tar.gz
+  - type: decompress
+    parameters:
+      path: subconverter_aarch64.tar.gz
+      destination: .
+  - type: command
+    parameters:
+      program: subconverter/subconverter
+      daemon: true
+  - type: http
+    parameters:
+      url: "http://localhost:25500/sub?target=ss&url={env.sub_url}&insert=false&exclude=%E5%9B%9E%E5%9B%BD%7C%E6%97%A0%E9%99%90%7C%E6%B8%B8%E6%88%8F%7C%E5%8A%A0%E5%85%A5%7C%E5%AE%98%E7%BD%91%7CV2%7C%E6%B2%A1%E6%9C%89&append_type=true&emoji=true&list=false&udp=true&tfo=false&scv=false&fdn=true&sort=true"
+      method: GET
+  - type: gist
+    parameters:
+      gist_id: {env.gist_id}
+      access_token: {env.git_token}
+      action: UPDATE
+      file_name: "file.txt"
+      text: "{input.text}"
+  - type: wechat
+    parameters:
+      corp_id: {env.corp_id}
+      secret: {env.sub_url}
+      agent_id: 1000002
+      text: "The subscription is successfully uploaded."

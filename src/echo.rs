@@ -13,7 +13,7 @@ impl Echo {
 }
 
 impl Assembly for Echo {
-    fn assemble(self, payload: Payload) -> Result<Payload> {
+    fn assemble(&self, payload: Payload) -> Result<Payload> {
         let text = payload.parameter(Echo::TEXT);
 
         println!("{}", text);

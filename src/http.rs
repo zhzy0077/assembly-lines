@@ -18,7 +18,7 @@ impl Http {
 }
 
 impl Assembly for Http {
-    fn assemble(self, payload: Payload) -> Result<Payload> {
+    fn assemble(&self, payload: Payload) -> Result<Payload> {
         let url = payload.parameter(Http::URL);
         let method = payload.parameter(Http::METHOD);
 

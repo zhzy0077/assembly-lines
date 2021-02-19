@@ -1,4 +1,4 @@
-use crate::{Payload, Workflow};
+use crate::{Context, Input, Inputs, Outputs, Workflow};
 use anyhow::Result;
 use std::{
     collections::HashMap,
@@ -18,10 +18,13 @@ impl Command {
 }
 
 impl Workflow for Command {
-    fn execute(&self, payload: Payload) -> Result<Payload> {
-        let program = payload.parameter(Command::PROGRAM);
-        let daemon: bool = payload.parameter(Command::DAEMON).parse().unwrap_or(false);
-        let inherit_io: bool = payload
+    fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
+    where
+        T: FnOnce(Context, Outputs) -> Result<()>,
+    {
+        let program = input.parameter(Command::PROGRAM);
+        let daemon: bool = input.parameter(Command::DAEMON).parse().unwrap_or(false);
+        let inherit_io: bool = input
             .parameter(Command::INHERIT_IO)
             .parse()
             .unwrap_or(false);
@@ -36,7 +39,7 @@ impl Workflow for Command {
             handle.wait()?;
         }
 
-        Ok(Payload::new(HashMap::new()))
+        next(context, HashMap::new())
     }
 
     fn parameters(&self) -> &'static [&'static str] {

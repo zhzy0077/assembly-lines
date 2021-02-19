@@ -2,22 +2,23 @@ use crate::{Context, Input, Inputs, Outputs, Workflow};
 use anyhow::Result;
 use std::collections::HashMap;
 
-pub struct Echo {}
+pub struct Atom {}
 
-impl Echo {
+impl Atom {
     // Input
-    const TEXT: &'static str = "text";
-    const PARAMS: [&'static str; 1] = [Echo::TEXT];
+    const URL: &'static str = "url";
+    const SCHEDULE_IN_MINUTE: &'static str = "schedule_in_minute";
+    const PARAMS: [&'static str; 2] = [Atom::URL, Atom::SCHEDULE_IN_MINUTE];
 
     const OUTPUT: [&'static str; 0] = [];
 }
 
-impl Workflow for Echo {
+impl Workflow for Atom {
     fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
     where
         T: FnOnce(Context, Outputs) -> Result<()>,
     {
-        let text = input.parameter(Echo::TEXT);
+        let text = input.parameter(Atom::URL);
 
         println!("{}", text);
 
@@ -25,9 +26,9 @@ impl Workflow for Echo {
     }
 
     fn parameters(&self) -> &'static [&'static str] {
-        return &Echo::PARAMS;
+        return &Atom::PARAMS;
     }
     fn outputs(&self) -> &'static [&'static str] {
-        return &Echo::OUTPUT;
+        return &Atom::OUTPUT;
     }
 }

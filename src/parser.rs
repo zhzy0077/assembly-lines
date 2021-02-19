@@ -1,3 +1,4 @@
+use crate::Context;
 use anyhow::{anyhow, Context as _, Result};
 use nom::{
     branch::alt,
@@ -8,10 +9,9 @@ use nom::{
     sequence::{delimited, preceded, separated_pair},
     IResult,
 };
+use std::collections::HashMap;
 
-use crate::Context;
-
-pub fn fulfill(raw: &str, context: &Context) -> Result<String> {
+pub fn fulfill(raw: &str, input: &HashMap<String, String>, context: &Context) -> Result<String> {
     let (_, texts) = parse(raw).map_err(|_| anyhow!("Unable to parse expression {}.", raw))?;
     let mut result = String::new();
     for text in texts {
@@ -24,8 +24,7 @@ pub fn fulfill(raw: &str, context: &Context) -> Result<String> {
             Text::Expression(Expression {
                 namespace: _,
                 field,
-            }) => context
-                .input
+            }) => input
                 .get(field)
                 .with_context(|| format!("Missing {}.", field))?,
         });

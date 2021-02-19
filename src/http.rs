@@ -1,4 +1,4 @@
-use crate::{Payload, Workflow};
+use crate::{Context, Input, Inputs, Outputs, Workflow};
 use anyhow::Result;
 use reqwest::blocking::{Client, Request};
 use std::collections::HashMap;
@@ -18,9 +18,12 @@ impl Http {
 }
 
 impl Workflow for Http {
-    fn execute(&self, payload: Payload) -> Result<Payload> {
-        let url = payload.parameter(Http::URL);
-        let method = payload.parameter(Http::METHOD);
+    fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
+    where
+        T: FnOnce(Context, Outputs) -> Result<()>,
+    {
+        let url = input.parameter(Http::URL);
+        let method = input.parameter(Http::METHOD);
 
         let client = Client::new();
         let request = Request::new(method.parse()?, url.parse()?);
@@ -30,7 +33,7 @@ impl Workflow for Http {
         result.insert(Http::STATUS_CODE, response.status().as_str().to_string());
         result.insert(Http::TEXT, response.text()?);
 
-        Ok(Payload::new(result))
+        next(context, result)
     }
 
     fn parameters(&self) -> &'static [&'static str] {

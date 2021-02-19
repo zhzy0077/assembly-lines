@@ -1,4 +1,4 @@
-use crate::{Payload, Workflow, USER_AGENT};
+use crate::{Context, Input, Inputs, Outputs, Workflow, USER_AGENT};
 use anyhow::Result;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
@@ -76,12 +76,15 @@ impl Gist {
 }
 
 impl Workflow for Gist {
-    fn execute(&self, payload: Payload) -> Result<Payload> {
-        let action: GistAction = payload.parameter(Gist::ACTION).to_uppercase().parse()?;
-        let gist_id = payload.parameter(Gist::GIST_ID);
-        let access_token = payload.parameter(Gist::ACCESS_TOKEN);
-        let file_name = payload.parameter(Gist::FILE_NAME);
-        let text = payload.parameter(Gist::TEXT);
+    fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
+    where
+        T: FnOnce(Context, Outputs) -> Result<()>,
+    {
+        let action: GistAction = input.parameter(Gist::ACTION).to_uppercase().parse()?;
+        let gist_id = input.parameter(Gist::GIST_ID);
+        let access_token = input.parameter(Gist::ACCESS_TOKEN);
+        let file_name = input.parameter(Gist::FILE_NAME);
+        let text = input.parameter(Gist::TEXT);
 
         let response = match action {
             GistAction::GET => Gist::get(gist_id),
@@ -96,7 +99,7 @@ impl Workflow for Gist {
 
         result.insert(Gist::TEXT, resp.files[file_name].content.to_string());
 
-        Ok(Payload::new(result))
+        next(context, result)
     }
 
     fn parameters(&self) -> &'static [&'static str] {

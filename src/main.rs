@@ -1,3 +1,4 @@
+mod atom;
 mod command;
 mod decompress;
 mod download;
@@ -8,6 +9,7 @@ mod parser;
 mod util;
 mod wechat;
 
+use crate::atom::Atom;
 use crate::command::Command;
 use crate::decompress::Decompress;
 use crate::download::Download;
@@ -26,41 +28,45 @@ const USER_AGENT: &'static str = "workflows/1.0";
 
 #[enum_dispatch(SupportedWorkflows)]
 trait Workflow {
-    fn execute(&self, input: Payload) -> Result<Payload>;
+    fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
+    where
+        T: FnOnce(Context, Outputs) -> Result<()>;
     fn parameters(&self) -> &'static [&'static str];
     fn outputs(&self) -> &'static [&'static str];
 }
 
 #[derive(Debug)]
 pub struct Context {
+    config: Config,
     env: HashMap<String, String>,
-    input: HashMap<String, String>,
 }
 
 impl Context {
-    fn new() -> Self {
-        let env: HashMap<String, String> = env::vars().collect::<_>();
-        let input: HashMap<String, String> = HashMap::new();
+    fn new(config: Config) -> Self {
+        let env: HashMap<String, String> = env::vars().collect();
 
-        Self { env, input }
+        Self { config, env }
+    }
+
+    fn next(&mut self) -> Option<WorkflowConfig> {
+        if self.config.workflows.is_empty() {
+            None
+        } else {
+            Some(self.config.workflows.remove(0))
+        }
     }
 }
 
-#[derive(Debug)]
-struct Payload {
-    parameters: HashMap<&'static str, String>,
+type Outputs = HashMap<&'static str, String>;
+type Inputs = HashMap<&'static str, String>;
+
+trait Input {
+    fn parameter(&self, key: &'static str) -> &str;
 }
 
-impl Payload {
-    fn new(parameters: HashMap<&'static str, String>) -> Self {
-        Self { parameters }
-    }
-
+impl Input for Inputs {
     fn parameter(&self, key: &'static str) -> &str {
-        self.parameters
-            .get(key)
-            .map(|s| &s[..])
-            .unwrap_or_else(|| "")
+        self.get(key).map(|s| &s[..]).unwrap_or_else(|| "")
     }
 }
 
@@ -73,6 +79,7 @@ enum SupportedWorkflows {
     Command,
     Download,
     Decompress,
+    Atom,
 }
 
 lazy_static! {
@@ -85,6 +92,7 @@ lazy_static! {
         m.insert("command", Command {}.into());
         m.insert("download", Download {}.into());
         m.insert("decompress", Decompress {}.into());
+        m.insert("atom", Atom {}.into());
         m
     };
 }
@@ -102,18 +110,33 @@ struct WorkflowConfig {
 
 fn make_workflow(
     config: &WorkflowConfig,
+    input: &HashMap<String, String>,
     context: &Context,
-) -> Result<(&'static SupportedWorkflows, Payload)> {
+) -> Result<(&'static SupportedWorkflows, Inputs)> {
     let workflow = WORKFLOWS
         .get(&config.workflow_type.to_lowercase()[..])
         .context(anyhow!("Workflow {} is not found.", config.workflow_type))?;
     let mut payload: HashMap<&'static str, String> = HashMap::new();
     for key in workflow.parameters() {
         if let Some(value) = config.parameters.get(*key) {
-            payload.insert(key, fulfill(value, &context)?);
+            payload.insert(key, fulfill(value, input, &context)?);
         }
     }
-    Ok((workflow, Payload::new(payload)))
+    Ok((workflow, payload))
+}
+
+fn do_next(mut context: Context, output: Outputs) -> Result<()> {
+    let input: HashMap<String, String> = output
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect();
+    let workflow_config = context.next();
+    if let Some(workflow_config) = workflow_config {
+        let (workflow, payload) = make_workflow(&workflow_config, &input, &context)?;
+        workflow.execute(context, payload, do_next)?;
+    }
+
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -124,17 +147,6 @@ fn main() -> Result<()> {
     let config = fs::read_to_string(config_path)?;
     let config: Config = serde_yaml::from_str(&config)?;
 
-    let mut context = Context::new();
-    for workflow_config in config.workflows.into_iter() {
-        let (workflow, payload) = make_workflow(&workflow_config, &context)?;
-        let output = workflow.execute(payload)?;
-
-        context.input = output
-            .parameters
-            .into_iter()
-            .map(|(k, v)| (k.to_string(), v))
-            .collect();
-    }
-
-    Ok(())
+    let context = Context::new(config);
+    do_next(context, HashMap::new())
 }

@@ -1,4 +1,4 @@
-use crate::{Assembly, Payload};
+use crate::{Payload, Workflow};
 use anyhow::Result;
 use std::{
     collections::HashMap,
@@ -17,8 +17,8 @@ impl Command {
     const OUTPUT: [&'static str; 0] = [];
 }
 
-impl Assembly for Command {
-    fn assemble(&self, payload: Payload) -> Result<Payload> {
+impl Workflow for Command {
+    fn execute(&self, payload: Payload) -> Result<Payload> {
         let program = payload.parameter(Command::PROGRAM);
         let daemon: bool = payload.parameter(Command::DAEMON).parse().unwrap_or(false);
         let inherit_io: bool = payload

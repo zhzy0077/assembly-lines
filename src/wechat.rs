@@ -1,4 +1,4 @@
-use crate::{Assembly, Payload};
+use crate::{Payload, Workflow};
 
 use anyhow::Result;
 use reqwest::blocking::Client;
@@ -64,8 +64,8 @@ impl WeChat {
     const OUTPUT: [&'static str; 0] = [];
 }
 
-impl Assembly for WeChat {
-    fn assemble(&self, payload: Payload) -> Result<Payload> {
+impl Workflow for WeChat {
+    fn execute(&self, payload: Payload) -> Result<Payload> {
         let corp_id = payload.parameter(WeChat::CORP_ID);
         let secret = payload.parameter(WeChat::CORP_SECRET);
         let agent_id = payload.parameter(WeChat::AGENT_ID).parse()?;

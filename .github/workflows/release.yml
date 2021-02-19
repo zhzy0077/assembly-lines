@@ -46,6 +46,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./target/release/assembly-lines
-        asset_name: assembly-lines-linux-x64
+        asset_path: ./target/release/workflows
+        asset_name: workflows-linux-x64
         asset_content_type: application/octet-stream

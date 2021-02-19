@@ -1,4 +1,4 @@
-use crate::{Assembly, Payload};
+use crate::{Payload, Workflow};
 use anyhow::Result;
 use reqwest::blocking::Client;
 use std::{collections::HashMap, fs::File, io};
@@ -14,8 +14,8 @@ impl Download {
     const OUTPUT: [&'static str; 0] = [];
 }
 
-impl Assembly for Download {
-    fn assemble(&self, payload: Payload) -> Result<Payload> {
+impl Workflow for Download {
+    fn execute(&self, payload: Payload) -> Result<Payload> {
         let url = payload.parameter(Download::URL);
         let destination = payload.parameter(Download::DESTINATION);
 

@@ -1,4 +1,4 @@
-assembly_line:
+workflows:
   - type: download
     parameters:
       url: https://github.com/tindy2013/subconverter/releases/download/v0.6.4/subconverter_aarch64.tar.gz
@@ -17,14 +17,14 @@ assembly_line:
       method: GET
   - type: gist
     parameters:
-      gist_id: {env.gist_id}
-      access_token: {env.git_token}
+      gist_id: "{env.gist_id}"
+      access_token: "{env.git_token}"
       action: UPDATE
       file_name: "file.txt"
       text: "{input.text}"
   - type: wechat
     parameters:
-      corp_id: {env.corp_id}
-      secret: {env.sub_url}
+      corp_id: "{env.corp_id}"
+      secret: "{env.corp_secret}"
       agent_id: 1000002
       text: "The subscription is successfully uploaded."

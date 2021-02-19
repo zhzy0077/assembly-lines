@@ -1,4 +1,4 @@
-use crate::{Assembly, Payload};
+use crate::{Payload, Workflow};
 use anyhow::Result;
 use std::collections::HashMap;
 
@@ -12,8 +12,8 @@ impl Echo {
     const OUTPUT: [&'static str; 0] = [];
 }
 
-impl Assembly for Echo {
-    fn assemble(&self, payload: Payload) -> Result<Payload> {
+impl Workflow for Echo {
+    fn execute(&self, payload: Payload) -> Result<Payload> {
         let text = payload.parameter(Echo::TEXT);
 
         println!("{}", text);

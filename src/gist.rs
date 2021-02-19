@@ -1,4 +1,4 @@
-use crate::{Assembly, Payload, USER_AGENT};
+use crate::{Payload, Workflow, USER_AGENT};
 use anyhow::Result;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
@@ -75,8 +75,8 @@ impl Gist {
     }
 }
 
-impl Assembly for Gist {
-    fn assemble(&self, payload: Payload) -> Result<Payload> {
+impl Workflow for Gist {
+    fn execute(&self, payload: Payload) -> Result<Payload> {
         let action: GistAction = payload.parameter(Gist::ACTION).to_uppercase().parse()?;
         let gist_id = payload.parameter(Gist::GIST_ID);
         let access_token = payload.parameter(Gist::ACCESS_TOKEN);

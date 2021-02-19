@@ -31,4 +31,4 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: linux-x64
-        path: target/debug/assembly-lines
+        path: target/debug/workflows

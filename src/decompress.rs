@@ -1,4 +1,4 @@
-use crate::{Assembly, Payload};
+use crate::{Workflow, Payload};
 use anyhow::Result;
 use flate2::read::GzDecoder;
 use std::{collections::HashMap, fs::File};
@@ -15,8 +15,8 @@ impl Decompress {
     const OUTPUT: [&'static str; 0] = [];
 }
 
-impl Assembly for Decompress {
-    fn assemble(&self, payload: Payload) -> Result<Payload> {
+impl Workflow for Decompress {
+    fn execute(&self, payload: Payload) -> Result<Payload> {
         let path = payload.parameter(Decompress::PATH);
         let destination = payload.parameter(Decompress::DESTINATION);
 

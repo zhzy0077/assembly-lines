@@ -1,5 +1,5 @@
 [package]
-name = "assembly-lines"
+name = "workflows"
 version = "0.1.0"
 authors = ["Zhiyuan Zheng"]
 edition = "2018"

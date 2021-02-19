@@ -22,11 +22,11 @@ use parser::fulfill;
 use serde::Deserialize;
 use std::{collections::HashMap, env, fs};
 
-const USER_AGENT: &'static str = "assemblies/1.0";
+const USER_AGENT: &'static str = "workflows/1.0";
 
-#[enum_dispatch(SupportedAssemblies)]
-trait Assembly {
-    fn assemble(&self, input: Payload) -> Result<Payload>;
+#[enum_dispatch(SupportedWorkflows)]
+trait Workflow {
+    fn execute(&self, input: Payload) -> Result<Payload>;
     fn parameters(&self) -> &'static [&'static str];
     fn outputs(&self) -> &'static [&'static str];
 }
@@ -65,7 +65,7 @@ impl Payload {
 }
 
 #[enum_dispatch]
-enum SupportedAssemblies {
+enum SupportedWorkflows {
     Http,
     Gist,
     Echo,
@@ -76,7 +76,7 @@ enum SupportedAssemblies {
 }
 
 lazy_static! {
-    static ref ASSMBLIES: HashMap<&'static str, SupportedAssemblies> = {
+    static ref WORKFLOWS: HashMap<&'static str, SupportedWorkflows> = {
         let mut m = HashMap::new();
         m.insert("http", Http {}.into());
         m.insert("echo", Echo {}.into());
@@ -91,29 +91,29 @@ lazy_static! {
 
 #[derive(Debug, Deserialize)]
 struct Config {
-    assembly_line: Vec<AssemblyConfig>,
+    workflows: Vec<WorkflowConfig>,
 }
 #[derive(Debug, Deserialize)]
-struct AssemblyConfig {
+struct WorkflowConfig {
     #[serde(rename = "type")]
-    assembly_type: String,
+    workflow_type: String,
     parameters: HashMap<String, String>,
 }
 
-fn make_assembly(
-    config: &AssemblyConfig,
+fn make_workflow(
+    config: &WorkflowConfig,
     context: &Context,
-) -> Result<(&'static SupportedAssemblies, Payload)> {
-    let assembly = ASSMBLIES
-        .get(&config.assembly_type.to_lowercase()[..])
-        .context(anyhow!("Assembly {} is not found.", config.assembly_type))?;
+) -> Result<(&'static SupportedWorkflows, Payload)> {
+    let workflow = WORKFLOWS
+        .get(&config.workflow_type.to_lowercase()[..])
+        .context(anyhow!("Workflow {} is not found.", config.workflow_type))?;
     let mut payload: HashMap<&'static str, String> = HashMap::new();
-    for key in assembly.parameters() {
+    for key in workflow.parameters() {
         if let Some(value) = config.parameters.get(*key) {
             payload.insert(key, fulfill(value, &context)?);
         }
     }
-    Ok((assembly, Payload::new(payload)))
+    Ok((workflow, Payload::new(payload)))
 }
 
 fn main() -> Result<()> {
@@ -125,9 +125,9 @@ fn main() -> Result<()> {
     let config: Config = serde_yaml::from_str(&config)?;
 
     let mut context = Context::new();
-    for assembly_config in config.assembly_line.into_iter() {
-        let (assembly, payload) = make_assembly(&assembly_config, &context)?;
-        let output = assembly.assemble(payload)?;
+    for workflow_config in config.workflows.into_iter() {
+        let (workflow, payload) = make_workflow(&workflow_config, &context)?;
+        let output = workflow.execute(payload)?;
 
         context.input = output
             .parameters

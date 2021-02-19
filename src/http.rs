@@ -1,4 +1,4 @@
-use crate::{Assembly, Payload};
+use crate::{Payload, Workflow};
 use anyhow::Result;
 use reqwest::blocking::{Client, Request};
 use std::collections::HashMap;
@@ -17,8 +17,8 @@ impl Http {
     const OUTPUT: [&'static str; 2] = [Http::STATUS_CODE, Http::TEXT];
 }
 
-impl Assembly for Http {
-    fn assemble(&self, payload: Payload) -> Result<Payload> {
+impl Workflow for Http {
+    fn execute(&self, payload: Payload) -> Result<Payload> {
         let url = payload.parameter(Http::URL);
         let method = payload.parameter(Http::METHOD);
 

@@ -1,4 +1,4 @@
-use crate::{Context, Input, Inputs, Outputs, Workflow};
+use crate::{Context, Input, Inputs, Workflow};
 
 use anyhow::Result;
 use reqwest::blocking::Client;
@@ -65,10 +65,7 @@ impl WeChat {
 }
 
 impl Workflow for WeChat {
-    fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
-    where
-        T: FnOnce(Context, Outputs) -> Result<()>,
-    {
+    fn execute(&self, context: &mut Context, input: Inputs) -> Result<()> {
         let corp_id = input.parameter(WeChat::CORP_ID);
         let secret = input.parameter(WeChat::CORP_SECRET);
         let agent_id = input.parameter(WeChat::AGENT_ID).parse()?;
@@ -102,7 +99,11 @@ impl Workflow for WeChat {
 
         let mut result = HashMap::new();
         result.insert(WeChat::ERROR_CODE, response.error_code.to_string());
-        next(context, result)
+
+        if let Some(next) = context.next() {
+            next.execute(context, result)?;
+        }
+        Ok(())
     }
 
     fn parameters(&self) -> &'static [&'static str] {

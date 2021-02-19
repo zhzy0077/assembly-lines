@@ -1,4 +1,4 @@
-use crate::{Context, Input, Inputs, Outputs, Workflow};
+use crate::{Context, Input, Inputs, Workflow};
 use anyhow::Result;
 use reqwest::blocking::Client;
 use std::{collections::HashMap, fs::File, io};
@@ -15,10 +15,7 @@ impl Download {
 }
 
 impl Workflow for Download {
-    fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
-    where
-        T: FnOnce(Context, Outputs) -> Result<()>,
-    {
+    fn execute(&self, context: &mut Context, input: Inputs) -> Result<()> {
         let url = input.parameter(Download::URL);
         let destination = input.parameter(Download::DESTINATION);
 
@@ -28,7 +25,10 @@ impl Workflow for Download {
         let mut response = client.get(url).send()?;
         io::copy(&mut response, &mut file)?;
 
-        next(context, HashMap::new())
+        if let Some(next) = context.next() {
+            next.execute(context, HashMap::new())?;
+        }
+        Ok(())
     }
 
     fn parameters(&self) -> &'static [&'static str] {

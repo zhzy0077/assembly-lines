@@ -1,4 +1,4 @@
-use crate::{Context, Input, Inputs, Outputs, Workflow, USER_AGENT};
+use crate::{Context, Input, Inputs, Workflow, USER_AGENT};
 use anyhow::Result;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
@@ -76,10 +76,7 @@ impl Gist {
 }
 
 impl Workflow for Gist {
-    fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
-    where
-        T: FnOnce(Context, Outputs) -> Result<()>,
-    {
+    fn execute(&self, context: &mut Context, input: Inputs) -> Result<()> {
         let action: GistAction = input.parameter(Gist::ACTION).to_uppercase().parse()?;
         let gist_id = input.parameter(Gist::GIST_ID);
         let access_token = input.parameter(Gist::ACCESS_TOKEN);
@@ -99,7 +96,10 @@ impl Workflow for Gist {
 
         result.insert(Gist::TEXT, resp.files[file_name].content.to_string());
 
-        next(context, result)
+        if let Some(next) = context.next() {
+            next.execute(context, result)?;
+        }
+        Ok(())
     }
 
     fn parameters(&self) -> &'static [&'static str] {

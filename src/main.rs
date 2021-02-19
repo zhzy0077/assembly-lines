@@ -6,6 +6,7 @@ mod echo;
 mod gist;
 mod http;
 mod parser;
+mod read;
 mod util;
 mod wechat;
 
@@ -16,6 +17,7 @@ use crate::download::Download;
 use crate::echo::Echo;
 use crate::gist::Gist;
 use crate::http::Http;
+use crate::read::Read;
 use crate::wechat::WeChat;
 use anyhow::{anyhow, Context as _, Result};
 use enum_dispatch::enum_dispatch;
@@ -28,15 +30,14 @@ const USER_AGENT: &'static str = "workflows/1.0";
 
 #[enum_dispatch(SupportedWorkflows)]
 trait Workflow {
-    fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
-    where
-        T: FnOnce(Context, Outputs) -> Result<()>;
+    fn execute(&self, context: &mut Context, input: Inputs) -> Result<()>;
     fn parameters(&self) -> &'static [&'static str];
     fn outputs(&self) -> &'static [&'static str];
 }
 
 #[derive(Debug)]
 pub struct Context {
+    state: usize,
     config: Config,
     env: HashMap<String, String>,
 }
@@ -45,7 +46,11 @@ impl Context {
     fn new(config: Config) -> Self {
         let env: HashMap<String, String> = env::vars().collect();
 
-        Self { config, env }
+        Self {
+            state: 0,
+            config,
+            env,
+        }
     }
 
     fn next(&mut self) -> Option<WorkflowConfig> {
@@ -80,6 +85,7 @@ enum SupportedWorkflows {
     Download,
     Decompress,
     Atom,
+    Read,
 }
 
 lazy_static! {
@@ -93,6 +99,7 @@ lazy_static! {
         m.insert("download", Download {}.into());
         m.insert("decompress", Decompress {}.into());
         m.insert("atom", Atom {}.into());
+        m.insert("read", Read {}.into());
         m
     };
 }
@@ -108,35 +115,32 @@ struct WorkflowConfig {
     parameters: HashMap<String, String>,
 }
 
-fn make_workflow(
-    config: &WorkflowConfig,
-    input: &HashMap<String, String>,
-    context: &Context,
-) -> Result<(&'static SupportedWorkflows, Inputs)> {
-    let workflow = WORKFLOWS
-        .get(&config.workflow_type.to_lowercase()[..])
-        .context(anyhow!("Workflow {} is not found.", config.workflow_type))?;
-    let mut payload: HashMap<&'static str, String> = HashMap::new();
-    for key in workflow.parameters() {
-        if let Some(value) = config.parameters.get(*key) {
-            payload.insert(key, fulfill(value, input, &context)?);
+impl WorkflowConfig {
+    fn execute(&self, context: &mut Context, output: Outputs) -> Result<()> {
+        let input: HashMap<String, String> = output
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect();
+        let (workflow, payload) = self.make_workflow(&input, &context)?;
+        workflow.execute(context, payload)
+    }
+
+    fn make_workflow(
+        &self,
+        input: &HashMap<String, String>,
+        context: &Context,
+    ) -> Result<(&'static SupportedWorkflows, Inputs)> {
+        let workflow = WORKFLOWS
+            .get(&self.workflow_type.to_lowercase()[..])
+            .context(anyhow!("Workflow {} is not found.", self.workflow_type))?;
+        let mut payload: HashMap<&'static str, String> = HashMap::new();
+        for key in workflow.parameters() {
+            if let Some(value) = self.parameters.get(*key) {
+                payload.insert(key, fulfill(value, input, &context)?);
+            }
         }
+        Ok((workflow, payload))
     }
-    Ok((workflow, payload))
-}
-
-fn do_next(mut context: Context, output: Outputs) -> Result<()> {
-    let input: HashMap<String, String> = output
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v))
-        .collect();
-    let workflow_config = context.next();
-    if let Some(workflow_config) = workflow_config {
-        let (workflow, payload) = make_workflow(&workflow_config, &input, &context)?;
-        workflow.execute(context, payload, do_next)?;
-    }
-
-    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -147,6 +151,10 @@ fn main() -> Result<()> {
     let config = fs::read_to_string(config_path)?;
     let config: Config = serde_yaml::from_str(&config)?;
 
-    let context = Context::new(config);
-    do_next(context, HashMap::new())
+    let mut context = Context::new(config);
+    if let Some(next) = context.next() {
+        next.execute(&mut context, HashMap::new())?;
+    }
+
+    Ok(())
 }

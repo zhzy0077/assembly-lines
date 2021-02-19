@@ -1,4 +1,4 @@
-use crate::{Context, Input, Inputs, Outputs, Workflow};
+use crate::{Context, Input, Inputs, Workflow};
 use anyhow::Result;
 use flate2::read::GzDecoder;
 use std::{collections::HashMap, fs::File};
@@ -16,10 +16,7 @@ impl Decompress {
 }
 
 impl Workflow for Decompress {
-    fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
-    where
-        T: FnOnce(Context, Outputs) -> Result<()>,
-    {
+    fn execute(&self, context: &mut Context, input: Inputs) -> Result<()> {
         let path = input.parameter(Decompress::PATH);
         let destination = input.parameter(Decompress::DESTINATION);
 
@@ -28,7 +25,10 @@ impl Workflow for Decompress {
         let mut archive = Archive::new(tar);
         archive.unpack(destination)?;
 
-        next(context, HashMap::new())
+        if let Some(next) = context.next() {
+            next.execute(context, HashMap::new())?;
+        }
+        Ok(())
     }
 
     fn parameters(&self) -> &'static [&'static str] {

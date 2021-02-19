@@ -1,28 +1,58 @@
 use crate::{Context, Input, Inputs, Outputs, Workflow};
 use anyhow::Result;
-use std::collections::HashMap;
+use atom_syndication::Feed;
+use chrono::{Duration, Local};
+use std::{collections::HashMap, io::BufReader};
 
 pub struct Atom {}
 
 impl Atom {
     // Input
-    const URL: &'static str = "url";
-    const SCHEDULE_IN_MINUTE: &'static str = "schedule_in_minute";
-    const PARAMS: [&'static str; 2] = [Atom::URL, Atom::SCHEDULE_IN_MINUTE];
+    const TEXT: &'static str = "text";
+    const SCHEDULE_IN_SECS: &'static str = "schedule_in_secs";
+    const PARAMS: [&'static str; 2] = [Atom::TEXT, Atom::SCHEDULE_IN_SECS];
 
-    const OUTPUT: [&'static str; 0] = [];
+    const TITLE: &'static str = "title";
+    const LINK: &'static str = "link";
+    const OUTPUT: [&'static str; 2] = [Atom::TITLE, Atom::LINK];
 }
 
 impl Workflow for Atom {
-    fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
-    where
-        T: FnOnce(Context, Outputs) -> Result<()>,
-    {
-        let text = input.parameter(Atom::URL);
+    fn execute(&self, context: &mut Context, input: Inputs) -> Result<()> {
+        let text = input.parameter(Atom::TEXT);
+        let after = input
+            .parameter(Atom::SCHEDULE_IN_SECS)
+            .parse()
+            .map(|secs| Local::now() - Duration::seconds(secs));
 
-        println!("{}", text);
+        let next = match context.next() {
+            Some(next) => next,
+            None => return Ok(()),
+        };
+        let feed = Feed::read_from(BufReader::new(text.as_bytes())).unwrap();
+        for entry in feed.entries() {
+            if let Some(published) = entry.published() {
+                if let Ok(after) = after {
+                    if published < &after {
+                        break;
+                    }
+                }
+            }
+            let mut output = Outputs::new();
+            output.insert(Atom::TITLE, entry.title().to_string());
+            output.insert(
+                Atom::LINK,
+                entry
+                    .links()
+                    .iter()
+                    .map(|link| link.href())
+                    .collect::<Vec<_>>()
+                    .join(","),
+            );
+            next.execute(context, output)?;
+        }
 
-        next(context, HashMap::new())
+        Ok(())
     }
 
     fn parameters(&self) -> &'static [&'static str] {

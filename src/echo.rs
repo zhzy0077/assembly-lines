@@ -1,4 +1,4 @@
-use crate::{Context, Input, Inputs, Outputs, Workflow};
+use crate::{Context, Input, Inputs, Workflow};
 use anyhow::Result;
 use std::collections::HashMap;
 
@@ -13,15 +13,15 @@ impl Echo {
 }
 
 impl Workflow for Echo {
-    fn execute<T>(&self, context: Context, input: Inputs, next: T) -> Result<()>
-    where
-        T: FnOnce(Context, Outputs) -> Result<()>,
-    {
+    fn execute(&self, context: &mut Context, input: Inputs) -> Result<()> {
         let text = input.parameter(Echo::TEXT);
 
         println!("{}", text);
 
-        next(context, HashMap::new())
+        if let Some(next) = context.next() {
+            next.execute(context, HashMap::new())?;
+        }
+        Ok(())
     }
 
     fn parameters(&self) -> &'static [&'static str] {

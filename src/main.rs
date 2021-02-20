@@ -1,23 +1,25 @@
 mod atom;
 mod command;
 mod decompress;
-mod download;
 mod echo;
 mod gist;
 mod http;
 mod parser;
 mod read;
+mod rss;
+mod save;
 mod util;
 mod wechat;
 
 use crate::atom::Atom;
 use crate::command::Command;
 use crate::decompress::Decompress;
-use crate::download::Download;
 use crate::echo::Echo;
 use crate::gist::Gist;
 use crate::http::Http;
 use crate::read::Read;
+use crate::rss::Rss;
+use crate::save::Save;
 use crate::wechat::WeChat;
 use anyhow::{anyhow, Context as _, Result};
 use enum_dispatch::enum_dispatch;
@@ -82,10 +84,11 @@ enum SupportedWorkflows {
     Echo,
     WeChat,
     Command,
-    Download,
+    Save,
     Decompress,
     Atom,
     Read,
+    Rss,
 }
 
 lazy_static! {
@@ -96,10 +99,11 @@ lazy_static! {
         m.insert("wechat", WeChat {}.into());
         m.insert("gist", Gist {}.into());
         m.insert("command", Command {}.into());
-        m.insert("download", Download {}.into());
+        m.insert("save", Save {}.into());
         m.insert("decompress", Decompress {}.into());
         m.insert("atom", Atom {}.into());
         m.insert("read", Read {}.into());
+        m.insert("rss", Rss {}.into());
         m
     };
 }

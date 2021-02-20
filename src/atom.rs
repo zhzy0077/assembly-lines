@@ -2,7 +2,7 @@ use crate::{Context, Input, Inputs, Outputs, Workflow};
 use anyhow::Result;
 use atom_syndication::Feed;
 use chrono::{Duration, Local};
-use std::{collections::HashMap, io::BufReader};
+use std::{io::BufReader};
 
 pub struct Atom {}
 
@@ -12,6 +12,7 @@ impl Atom {
     const SCHEDULE_IN_SECS: &'static str = "schedule_in_secs";
     const PARAMS: [&'static str; 2] = [Atom::TEXT, Atom::SCHEDULE_IN_SECS];
 
+    // Output
     const TITLE: &'static str = "title";
     const LINK: &'static str = "link";
     const OUTPUT: [&'static str; 2] = [Atom::TITLE, Atom::LINK];
@@ -29,13 +30,11 @@ impl Workflow for Atom {
             Some(next) => next,
             None => return Ok(()),
         };
-        let feed = Feed::read_from(BufReader::new(text.as_bytes())).unwrap();
+        let feed = Feed::read_from(BufReader::new(text.as_bytes()))?;
         for entry in feed.entries() {
-            if let Some(published) = entry.published() {
-                if let Ok(after) = after {
-                    if published < &after {
-                        break;
-                    }
+            if let Ok(after) = after {
+                if entry.updated() < &after {
+                    break;
                 }
             }
             let mut output = Outputs::new();

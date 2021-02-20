@@ -1,0 +1,15 @@
+workflows:
+  - type: http
+    parameters:
+      url: https://github.com/bitwarden/desktop/releases.atom
+      method: GET
+  - type: atom
+    parameters:
+      text: "{input.text}"
+      schedule_in_secs: 86400
+  - type: wechat
+    parameters:
+      corp_id: "{env.corp_id}"
+      secret: "{env.corp_secret}"
+      agent_id: 1000002
+      text: "{input.title} - {input.link}"

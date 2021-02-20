@@ -22,6 +22,7 @@ impl Workflow for Http {
         let url = input.parameter(Http::URL);
         let method = input.parameter(Http::METHOD);
 
+        reqwest::Proxy::all("http://127.0.0.1:7890")?;
         let client = Client::new();
         let request = Request::new(method.parse()?, url.parse()?);
         let response = client.execute(request)?;

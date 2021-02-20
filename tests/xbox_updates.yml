@@ -1,0 +1,12 @@
+workflows:
+  - type: http
+    parameters:
+      url: https://news.xbox.com/en-us/feed/
+      method: GET
+  - type: rss
+    parameters:
+      text: "{input.text}"
+      schedule_in_secs: 86400
+  - type: echo
+    parameters:
+      text: "{input.title} - {input.link}"
